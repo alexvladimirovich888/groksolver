@@ -1,0 +1,6 @@
+{
+  "name": "Grok Solver Dashboard",
+  "description": "Multi-agent system solving 7 unsolved mathematical problems with Grok Desktop aesthetic.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
