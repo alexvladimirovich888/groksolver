@@ -1,14 +1,11 @@
 import { AgentData, MemoryEntry, TelemetryLog } from '../types';
-import avatar1 from '../assets/avatar1.png';
-import avatar2 from '../assets/avatar2.png';
-import avatar3 from '../assets/avatar3.png';
-import avatar4 from '../assets/avatar4.png';
+import { AVATAR1_BASE64, AVATAR2_BASE64, AVATAR3_BASE64, AVATAR4_BASE64 } from '../assets/images';
 
 export const AVATAR_IMAGES = [
-  avatar1,
-  avatar2,
-  avatar3,
-  avatar4,
+  AVATAR1_BASE64,
+  AVATAR2_BASE64,
+  AVATAR3_BASE64,
+  AVATAR4_BASE64,
 ];
 
 export const INITIAL_AGENTS: AgentData[] = [

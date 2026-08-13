@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { PanelRight, Edit2, Check, Copy, CheckCheck } from 'lucide-react';
-import logoImg from '../assets/logo.png';
+import { LOGO_BASE64 } from '../assets/images';
 
 interface TopBarProps {
   projectName: string;
@@ -55,7 +55,7 @@ export const TopBar: React.FC<TopBarProps> = ({
       {/* Left: Logo image + GrokSolver text */}
       <div className="flex items-center gap-2.5 min-w-[180px] shrink-0">
         <img
-          src={logoImg}
+          src={LOGO_BASE64}
           alt="Grok Logo"
           className="h-8 w-auto object-contain max-h-[36px] rounded-md"
           loading="eager"
