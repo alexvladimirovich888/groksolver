@@ -54,7 +54,7 @@ export const TopBar: React.FC<TopBarProps> = ({
       {/* Left: Logo image + GrokSolver text */}
       <div className="flex items-center gap-2.5 min-w-[180px] shrink-0">
         <img
-          src="/grok-logo.webp"
+          src="/logo.png"
           alt="Grok Logo"
           className="h-8 w-auto object-contain max-h-[36px] rounded-md"
           loading="eager"

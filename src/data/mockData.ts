@@ -1,10 +1,10 @@
 import { AgentData, MemoryEntry, TelemetryLog } from '../types';
 
 export const AVATAR_IMAGES = [
-  '/avatar1.webp',
-  '/avatar2.webp',
-  '/avatar3.webp',
-  '/avatar4.webp',
+  '/avatar1.png',
+  '/avatar2.png',
+  '/avatar3.png',
+  '/avatar4.png',
 ];
 
 export const INITIAL_AGENTS: AgentData[] = [
