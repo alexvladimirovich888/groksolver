@@ -94,7 +94,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     src={agent.avatarUrl}
                     alt={agent.name}
                     className="w-full h-full object-contain"
-                    referrerPolicy="no-referrer"
+                    loading="eager"
+                    decoding="async"
                   />
 
                   {/* Solved checkmark pill overlay */}

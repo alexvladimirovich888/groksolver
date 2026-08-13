@@ -1,10 +1,10 @@
 import { AgentData, MemoryEntry, TelemetryLog } from '../types';
 
 export const AVATAR_IMAGES = [
-  'https://i.postimg.cc/JnBRxtGF/Gemini-Generated-Image-17e9ks17e9ks17e9-no-bg-preview-(carve-photos).png',
-  'https://i.postimg.cc/hPnK8Dcq/Gemini-Generated-Image-60tcfs60tcfs60tc-no-bg-preview-(carve-photos)-(1).png',
-  'https://i.postimg.cc/zGX5Mxyn/Gemini-Generated-Image-ozpx43ozpx43ozpx-no-bg-preview-(carve-photos).png',
-  'https://i.postimg.cc/nLXxVMYZ/Gemini-Generated-Image-o92k5go92k5go92k-no-bg-preview-(carve-photos).png',
+  '/avatar1.webp',
+  '/avatar2.webp',
+  '/avatar3.webp',
+  '/avatar4.webp',
 ];
 
 export const INITIAL_AGENTS: AgentData[] = [

@@ -79,7 +79,8 @@ export const AgentCard: React.FC<AgentCardProps> = ({ agent, onInspect, isSelect
                 src={agent.avatarUrl}
                 alt={agent.name}
                 className="w-full h-full object-contain"
-                referrerPolicy="no-referrer"
+                loading="eager"
+                decoding="async"
               />
               {isSolvedSome && (
                 <div className="absolute -bottom-0.5 -right-0.5 bg-white rounded-full p-0.5 border-2 border-[#111115]" title="Sub-proofs solved">

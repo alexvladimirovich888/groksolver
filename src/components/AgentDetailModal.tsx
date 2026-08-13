@@ -24,7 +24,8 @@ export const AgentDetailModal: React.FC<AgentDetailModalProps> = ({ agent, onClo
                 src={agent.avatarUrl}
                 alt={agent.name}
                 className="w-full h-full object-contain"
-                referrerPolicy="no-referrer"
+                loading="eager"
+                decoding="async"
               />
             </div>
 
