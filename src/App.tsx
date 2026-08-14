@@ -3,22 +3,79 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { TopBar } from './components/TopBar';
 import { Sidebar } from './components/Sidebar';
 import { AgentCard } from './components/AgentCard';
 import { RightMemoryPanel } from './components/RightMemoryPanel';
 import { AgentDetailModal } from './components/AgentDetailModal';
-import { INITIAL_AGENTS, INITIAL_MEMORY_ENTRIES, INITIAL_LOGS } from './data/mockData';
+import { 
+  INITIAL_AGENTS, 
+  generateInitialMemoryEntries, 
+  generateInitialLogs,
+  PROOF_LOG_GENERATOR_POOL,
+  getFullTimeString,
+  getRelativeTimeString,
+  getFormattedCurrentDate
+} from './data/mockData';
 import { AgentData, MemoryEntry, TelemetryLog, GlobalDashboardStats } from './types';
 import { LayoutGrid, ListFilter, Sparkles, ShieldCheck, Zap, Server, Activity } from 'lucide-react';
 
+const STORAGE_KEYS = {
+  LOGS: 'groksolver_telemetry_logs_v2',
+  MEMORY: 'groksolver_memory_entries_v2',
+  AGENTS: 'groksolver_agents_v2',
+  LAST_SYNC: 'groksolver_last_sync_v2',
+};
+
 export default function App() {
-  // Application State
+  // Application State with localStorage hydration
   const [projectName, setProjectName] = useState('Grok Solver Dashboard');
-  const [agents, setAgents] = useState<AgentData[]>(INITIAL_AGENTS);
-  const [memoryEntries, setMemoryEntries] = useState<MemoryEntry[]>(INITIAL_MEMORY_ENTRIES);
-  const [logs, setLogs] = useState<TelemetryLog[]>(INITIAL_LOGS);
+
+  const [agents, setAgents] = useState<AgentData[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.AGENTS);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length === 7) {
+          return parsed;
+        }
+      }
+    } catch (e) {
+      // Fallback
+    }
+    return INITIAL_AGENTS;
+  });
+
+  const [memoryEntries, setMemoryEntries] = useState<MemoryEntry[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.MEMORY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+    } catch (e) {
+      // Fallback
+    }
+    return generateInitialMemoryEntries();
+  });
+
+  const [logs, setLogs] = useState<TelemetryLog[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.LOGS);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+    } catch (e) {
+      // Fallback
+    }
+    return generateInitialLogs();
+  });
   
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
   const [inspectedAgent, setInspectedAgent] = useState<AgentData | null>(null);
@@ -28,7 +85,30 @@ export default function App() {
   const [rightPanelOpen, setRightPanelOpen] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isSynced, setIsSynced] = useState(true);
-  const [lastSyncTime, setLastSyncTime] = useState('13 Aug 2026 16:30');
+
+  // Dynamic real-time sync timestamp
+  const [lastSyncTime, setLastSyncTime] = useState<string>(() => {
+    return getFormattedCurrentDate();
+  });
+
+  // Save to localStorage when state changes
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.LOGS, JSON.stringify(logs.slice(0, 100)));
+    } catch (e) {}
+  }, [logs]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.MEMORY, JSON.stringify(memoryEntries.slice(0, 30)));
+    } catch (e) {}
+  }, [memoryEntries]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.AGENTS, JSON.stringify(agents));
+    } catch (e) {}
+  }, [agents]);
 
   // Audio chime using Web Audio API
   const playSyncSound = () => {
@@ -55,54 +135,77 @@ export default function App() {
     }
   };
 
-  // Live simulation ticker: updates step counters and log messages periodically
+  // Keep a pool index ref to cycle naturally through diverse proofs
+  const poolIndexRef = useRef(0);
+  const tickCountRef = useRef(0);
+
+  // Live simulation ticker: continuously streams logs and updates steps
   useEffect(() => {
     const interval = setInterval(() => {
+      tickCountRef.current += 1;
+      const currentTimeStr = getFullTimeString(0);
+
+      // 1. Pick next log message from rich mathematical pool or randomize
+      const poolItem = PROOF_LOG_GENERATOR_POOL[poolIndexRef.current % PROOF_LOG_GENERATOR_POOL.length];
+      poolIndexRef.current += 1;
+
+      // Small jitter variations on numbers to make every log uniquely live
+      const randomIteration = Math.floor(Math.random() * 90000) + 10000;
+      const newLogMessage = poolItem.message.replace(/#\d+/, `#${randomIteration}`);
+
+      const newLog: TelemetryLog = {
+        id: `log-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        timestamp: currentTimeStr,
+        agentId: poolItem.agentId,
+        agentName: poolItem.agentName,
+        message: newLogMessage,
+        type: poolItem.type,
+      };
+
+      // Prepend new log and keep up to 100 entries
+      setLogs((prev) => [newLog, ...prev.slice(0, 99)]);
+
+      // 2. Increment active steps for the corresponding agent
       setAgents((prevAgents) =>
         prevAgents.map((agent) => {
-          // Increment steps for active agent
-          const additionalSteps = Math.floor(Math.random() * 5) + 1;
-          const updatedStageInfo = {
-            ...agent.stageInfo,
-            stepsTaken: agent.stageInfo.stepsTaken + additionalSteps,
-          };
-
-          return {
-            ...agent,
-            stageInfo: updatedStageInfo,
-            lastUpdated: 'Just now',
-          };
+          if (agent.id === poolItem.agentId) {
+            const additionalSteps = Math.floor(Math.random() * 6) + 2;
+            return {
+              ...agent,
+              lastUpdated: 'Just now',
+              stageInfo: {
+                ...agent.stageInfo,
+                stepsTaken: agent.stageInfo.stepsTaken + additionalSteps,
+              },
+            };
+          }
+          return agent;
         })
       );
 
-      // Periodically add a telemetry log line
-      if (Math.random() > 0.6) {
-        const randomAgent = agents[Math.floor(Math.random() * agents.length)];
-        const now = new Date();
-        const timeStr = now.toTimeString().split(' ')[0];
-
-        const logMessages = [
-          `Verified step boundary for ${randomAgent.problemTitle}`,
-          `Computing tensor contraction on cluster node #${Math.floor(Math.random() * 64) + 1}`,
-          `Zero residual gap evaluated within tolerance 1e-12`,
-          `Branching orbit verified for sub-task #${Math.floor(Math.random() * 10) + 1}`,
+      // 3. Occasionally generate a memory milestone (every ~15 ticks, ~40 seconds)
+      if (tickCountRef.current % 15 === 0) {
+        const milestoneTitles = [
+          'Sub-step Boundary Verified',
+          'Tensor Contraction Check Passed',
+          'Zero Dispersion Bound Confirmed',
+          'Orbit Trajectory Batch Clean',
         ];
-
-        const newLog: TelemetryLog = {
-          id: `log-${Date.now()}`,
-          timestamp: timeStr,
-          agentId: randomAgent.id,
-          agentName: randomAgent.name,
-          message: logMessages[Math.floor(Math.random() * logMessages.length)],
-          type: 'info',
+        const randomTitle = milestoneTitles[Math.floor(Math.random() * milestoneTitles.length)];
+        const newMemory: MemoryEntry = {
+          id: `mem-${Date.now()}`,
+          timestamp: getRelativeTimeString(0),
+          title: `${poolItem.agentName}: ${randomTitle}`,
+          summary: newLogMessage,
+          tags: [poolItem.agentName.split(' ')[0], 'Live-Trace'],
+          agentId: poolItem.agentId,
         };
-
-        setLogs((prev) => [newLog, ...prev.slice(0, 19)]);
+        setMemoryEntries((prev) => [newMemory, ...prev.slice(0, 25)]);
       }
-    }, 2500);
+    }, 2400);
 
     return () => clearInterval(interval);
-  }, [agents]);
+  }, []);
 
   // Handle manual sync trigger
   const handleTriggerSync = () => {
@@ -113,21 +216,20 @@ export default function App() {
     setTimeout(() => {
       setIsSyncing(false);
       setIsSynced(true);
-      const now = new Date();
-      const formattedDate = `13 Aug 2026 ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
-      setLastSyncTime(formattedDate);
+      const updatedDate = getFormattedCurrentDate();
+      setLastSyncTime(updatedDate);
 
       // Add a memory log entry
       const newMemory: MemoryEntry = {
         id: `mem-${Date.now()}`,
-        timestamp: formattedDate.split(' ')[3] || '16:30',
+        timestamp: getRelativeTimeString(0),
         title: 'Manual State Sync Completed',
         summary: 'Synchronized all 7 mathematical agent proof graphs across distributed nodes.',
         tags: ['Sync', 'Grok Core'],
       };
 
-      setMemoryEntries((prev) => [newMemory, ...prev]);
-    }, 1200);
+      setMemoryEntries((prev) => [newMemory, ...prev.slice(0, 25)]);
+    }, 1000);
   };
 
   // Filter agents by search query & category
@@ -153,9 +255,15 @@ export default function App() {
 
   // Compute global stats
   const stats: GlobalDashboardStats = useMemo(() => {
-    const totalSubProblemsSolved = agents.reduce((acc, a) => acc + a.solvedCount, 0);
-    const totalSubProblems = agents.reduce((acc, a) => acc + a.totalProblems, 0);
-    const overallSolvedPercentage = Math.round((totalSubProblemsSolved / totalSubProblems) * 100);
+    const totalSubProblemsSolved = agents.reduce((acc, a) => acc + a.solvedCount, 0); // e.g. 16
+    const totalSubProblems = agents.reduce((acc, a) => acc + a.totalProblems, 0); // 49
+    
+    // The overall conjecture progress scale is calibrated around ~8.5% (in the 7-10% range)
+    const avgSolvedPercentage = Math.round(
+      agents.reduce((acc, a) => acc + a.solvedPercentage, 0) / agents.length
+    );
+    const overallSolvedPercentage = avgSolvedPercentage || 9;
+
     const totalStepsTaken = agents.reduce((acc, a) => acc + a.stageInfo.stepsTaken, 0);
     const totalComputeGflops = agents.reduce((acc, a) => acc + a.computeUsageGflops, 0);
 
@@ -212,7 +320,7 @@ export default function App() {
                   <span className="text-xs font-bold font-mono text-white bg-white/10 px-2 py-0.5 rounded border border-white/20 uppercase tracking-wider">
                     Distributed Multi-Agent Architecture
                   </span>
-                  <span className="text-xs text-zinc-500 font-mono">• 7 Active Solvers</span>
+                  <span className="text-xs text-zinc-400 font-mono">• 7 Active Solvers</span>
                 </div>
                 <h1 className="text-lg sm:text-xl font-bold text-white tracking-tight">
                   Unsolved Millennium & Open Problems Proof Grid
@@ -260,7 +368,7 @@ export default function App() {
               </span>
             </div>
 
-            {/* Dashboard Cards Grid (3x3 or 4 columns max as requested) */}
+            {/* Dashboard Cards Grid (3 columns max) */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4">
               {filteredAgents.map((agent) => (
                 <AgentCard
